@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <title>Trend Linker</title>
+    <style>
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body { margin: 0; height: 99vh; width: 99vw; display: grid; place-items: center; font-family: 'Roboto Mono', monospace; background:#1a1a1a; color:#e0e0e0; overflow: hidden; }
+        .main-wrapper { display: flex; flex-direction: column; width: 360px; gap: 10px; max-height: 99vh; }
+        #app { background:#2d2d2d; padding:20px; border-radius:8px; width: 100%; display:flex; flex-direction:column; gap:14px; }
+        .grid-container { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .input-group { display:flex; flex-direction:column; gap:6px; }
+        label { font-size:0.72em; color:#9aa0a6; text-transform:uppercase; letter-spacing:0.04em; }
+        .display-box, input { background:#3d3d3d; border:1px solid #4d4d4d; color:#fff; padding:10px; width:100%; font-family:inherit; font-size:0.95rem; border-radius:4px; outline: none; min-height: 40px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; }
+        input { caret-color: #007bff; }
+        .display-box.focused, input:focus { border: 1px solid #007bff; background: #454545; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+        button { background:#007bff; color:white; border:none; padding:12px; cursor:pointer; width:100%; font-weight:bold; border-radius:6px; }
+        button:hover { filter:brightness(1.1); }
+        .tags { display: flex; gap: 5px;}
+        .tag-btn { background:#444; color:#aaa; padding: 4px; flex:1; font-size: 0.75rem; text-align: center; border-radius: 4px; cursor: pointer; border:1px solid #555; }
+        .tag-btn.active { background:#4fc3f7; color:#000; border-color:#4fc3f7; font-weight: bold; }
+        .acc-right { display: flex; align-items: center; gap: 10px; }
+        #keypad-container { width: 100%; background: #1c1c1e; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .acc-bar { display: flex; justify-content: space-between; align-items: center; background: #2c2c2e; padding: 6px 10px; height: 40px; border-bottom: 1px solid #3a3a3c; }
+        .acc-arrows { display: flex; gap: 10px; }
+        .acc-btn { background: transparent; color: #007bff; border: none; font-size: 1.2rem; padding: 0 10px; cursor: pointer; width: auto; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        .acc-btn:active { background: #3a3a3c; }
+        .btn-clear { color: #ff5252; font-weight: bold; }
+        .bar-handle { width: 40px; height: 5px; background: #5c5c5e; border-radius: 10px; }
+        .pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 1px; background: #3a3a3c; border-top: 1px solid #3a3a3c; }
+        .key { background: #464648; color: #fff; font-size: 1.5rem; height: 55px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; border-radius: 0; width: 100%; user-select: none; }
+        .key:active { background: #636366; }
+        .key-del { background: #3a3a3c; font-size: 1.2rem; } 
+        .key-dot { background: #3a3a3c; font-weight: bold; padding-bottom: 10px;}
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden; min-width: 200px; background-color: rgba(0,0,0,0.85); color: #fff; text-align: center; border-radius: 50px; padding: 12px 24px; position: fixed; z-index: 99; left: 50%; top: 30px; transform: translateX(-50%); font-size: 14px; opacity: 0; transition: opacity 0.3s, top 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #333;
+        }
+        #toast.show { visibility: visible; opacity: 1; top: 50px; }
+    </style>
+</head>
+<body>
+    <div id="toast">Updating...</div>
+    <div class="main-wrapper">
+        <div id="app">
+            <div class="grid-container">
+                <div class="input-group">
+                    <label>Time 1 (MMDD-HHMM)</label>
+                    <div id="t1" class="display-box" onclick="focusField(0)">1201-2345</div>
+                </div>
+                <div class="input-group">
+                    <label>Price 1</label>
+                    <div id="p1" class="display-box" onclick="focusField(1)">83910.8</div>
+                </div>
+                <div class="input-group">
+                    <label>Time 2 (MMDD-HHMM)</label>
+                    <div id="t2" class="display-box" onclick="focusField(2)">1202-1700</div>
+                </div>
+                <div class="input-group">
+                    <label>Price 2</label>
+                    <div id="p2" class="display-box" onclick="focusField(3)">86414.4</div>
+                </div>
+                <div class="input-group">
+                    <label>Symbol</label>
+                    <input id="symbol" value="BTC" onfocus="focusField(4)"/>
+                </div>
+                <div class="input-group">
+                    <label>Tag & Deploy</label>
+                    <div class="tags">
+                        <div class="tag-btn" onclick="selTag(this, '5')">5</div>
+                        <div class="tag-btn" onclick="selTag(this, '15')">15</div>
+                        <div class="tag-btn" onclick="selTag(this, 'LONG')">LONG</div>
+                    </div>
+                    <button onclick="deploy()" style="padding:0 0;">DEPLOY</button>
+                </div>
+            </div>
+        </div>
+        <div id="keypad-container">
+            <div class="acc-bar">
+                <div class="acc-arrows">
+                    <button class="acc-btn" onclick="moveFocus(-1)">&#9650;</button> 
+                    <button class="acc-btn" onclick="moveFocus(1)">&#9660;</button>
+                    <button class="acc-btn btn-clear" onclick="clearCurrent()">&#10005;</button>  
+                </div>
+                <div class="bar-handle"></div>
+                <div style="width: 50px;">
+                    <div class="acc-right">
+                        <button class="acc-btn" onclick="press('-')">&mdash;</button>
+                    </div>
+                </div> 
+            </div>
+            <div class="pad-grid">
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('1')">1</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('2')">2</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('3')">3</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('4')">4</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('5')">5</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('6')">6</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('7')">7</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('8')">8</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('9')">9</button>
+                <button class="key key-dot" onmousedown="event.preventDefault()" onclick="press('.')">.</button>
+                <button class="key" onmousedown="event.preventDefault()" onclick="press('0')">0</button>
+                <button class="key key-del" onmousedown="event.preventDefault()" onclick="press('del')">&#9003;</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Update this URL to your Netlify function endpoint
+        const API_URL = "/.netlify/functions/api"; 
+        let currentTag = "";
+        const fieldIds = ['t1', 'p1', 't2', 'p2', 'symbol'];
+        let activeIndex = 0; 
+
+        window.onload = function() { focusField(0); };
+        function focusField(idx) {
+            activeIndex = idx;
+            fieldIds.forEach(id => document.getElementById(id).classList.remove('focused'));
+            const currentEl = document.getElementById(fieldIds[activeIndex]);
+            currentEl.classList.add('focused');
+            if (currentEl.tagName === 'INPUT') currentEl.focus();
+            else if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+        }
+        function moveFocus(dir) {
+            let newIndex = activeIndex + dir;
+            if (newIndex < 0) newIndex = fieldIds.length - 1;
+            if (newIndex >= fieldIds.length) newIndex = 0;
+            focusField(newIndex);
+        }
+        function clearCurrent() {
+            const el = document.getElementById(fieldIds[activeIndex]);
+            (el.tagName === 'INPUT') ? el.value = '' : el.innerText = '';
+        }
+        function press(key) {
+            const el = document.getElementById(fieldIds[activeIndex]);
+            let val = (el.tagName === 'INPUT') ? el.value : el.innerText;
+            if (key === 'del') val = val.slice(0, -1);
+            else if (key === '.') { if (!val.includes('.')) val = val + key; }
+            else val = val + key;
+            (el.tagName === 'INPUT') ? el.value = val : el.innerText = val;
+        }
+        function selTag(el, val) {
+            if (currentTag === val) { currentTag = ""; el.classList.remove('active'); }
+            else { document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active')); currentTag = val; el.classList.add('active'); }
+        }
+        function getMsLocal(str) {
+            if (!str || str.length < 9) return 0;
+            const y = 2025;
+            const mm = parseInt(str.substr(0,2),10) - 1;
+            const dd = parseInt(str.substr(2,2),10);
+            const hh = parseInt(str.substr(5,2),10);
+            const mi = parseInt(str.substr(7,2),10);
+            const utc = Date.UTC(y, mm, dd, hh, mi);
+            return utc - 8*3600*1000; 
+        }
+        function genRef() {
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let res = '';
+            for(let i=0; i<6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.innerText = msg;
+            t.className = "show";
+            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+        }
+        function deploy() {
+            let s = document.getElementById('symbol').value.trim().toUpperCase();
+            let t1Val = document.getElementById('t1').innerText.trim();
+            let p1 = document.getElementById('p1').innerText.trim();
+            let t2Val = document.getElementById('t2').innerText.trim();
+            let p2 = document.getElementById('p2').innerText.trim();
+            let t1 = getMsLocal(t1Val);
+            let t2 = getMsLocal(t2Val);
+
+            if (!s || !p1) { showToast("Missing Info"); return; }
+            if (!p2) { p2 = p1; if (t1 <= 0) t1 = Date.now(); if (t2 <= 0) t2 = t1 + 3600000; }
+            else { if (t1 <= 0 || t2 <= 0) { showToast("Check Times"); return; } }
+
+            const payload = {
+                ref: genRef(),
+                symb: s,
+                p1: parseFloat(p1),
+                p2: parseFloat(p2),
+                t1: t1,
+                t2: t2,
+                tag: currentTag
+            };
+
+            showToast("Updating...");
+
+            fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            }).then(r => {
+                if(r.ok) showToast("Updated.");
+                else showToast("Error.");
+            }).catch(e => showToast("Net Error"));
+        }
+    </script>
+</body>
+</html>
