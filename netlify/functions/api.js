@@ -1,8 +1,7 @@
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://neondb_owner:npg_KDJOFH1kx6uI@ep-polished-sea-afm2c9g8-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require';
-
 exports.handler = async (event, context) => {
+    const connectionString = process.env.DATABASE_URL;
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
