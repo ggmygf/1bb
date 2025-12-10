@@ -8,20 +8,35 @@
         body { margin: 0; background: #0f0f12; color: #a1a1aa; font-family: 'Roboto Mono', monospace; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         .container { flex: 1; overflow: auto; width: 100%; }
         table { border-collapse: separate; border-spacing: 0; width: 100%; white-space: nowrap; font-size: 13px; }
-        th, td { padding: 8px 10px; border-bottom: 1px solid #27272a; background: #18181b; }
-        th { background: #27272a; color: #e4e4e7; font-weight: 600; text-transform: uppercase; font-size: 11px; position: sticky; top: 0; z-index: 20; }
+        th, td { padding: 8px 10px; border-bottom: 1px solid #27272a; background: #18181b; vertical-align: middle; }
+        th { background: #27272a; color: #e4e4e7; font-weight: 600; text-transform: uppercase; font-size: 11px; position: sticky; top: 0; z-index: 20; text-align: left;}
         
-        /* Sticky Left Columns */
+        /* Sticky Left Column (Asset) */
         .sticky-left { position: sticky; left: 0; z-index: 10; background: #18181b; border-right: 1px solid #27272a; }
         th.sticky-left { z-index: 30; background: #27272a; }
 
         /* Styling */
         .sym { color: #fff; font-weight: bold; }
         .ref { color: #52525b; font-size: 10px; display: block; }
-        .tag { color: #4fc3f7; font-weight: bold; }
+        .tag { color: #4fc3f7; font-weight: bold; font-size: 11px; }
         .lasting { color: #fbbf24; }
-        .num { font-variant-numeric: tabular-nums; }
+        .num { font-variant-numeric: tabular-nums; color:#d4d4d8; }
         
+        /* Delete Button */
+        .btn-del {
+            background: #27272a;
+            color: #ef4444; /* Red */
+            border: 1px solid #3f3f46;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .btn-del:active { background: #ef4444; color: #000; }
+
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: #0f0f12; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; }
@@ -34,11 +49,9 @@
                 <tr>
                     <th class="sticky-left">Asset</th>
                     <th>P1</th>
-                    <th>P2</th>
-                    <th>T1</th>
-                    <th>T2</th>
                     <th>Tag</th>
                     <th>Lasting</th>
+                    <th style="text-align:right">Action</th>
                 </tr>
             </thead>
             <tbody id="tbody">
@@ -46,35 +59,53 @@
         </table>
     </div>
     <script>
-        const API = "/.netlify/functions/api"; // Same endpoint
+        const API = "/.netlify/functions/api"; 
 
-        function fmtTime(ms) {
-            if(!ms) return "-";
-            const d = new Date(ms + 8*3600*1000); // Adjust to display logic if needed
-            const mm = String(d.getUTCMonth()+1).padStart(2,'0');
-            const dd = String(d.getUTCDate()).padStart(2,'0');
-            const hh = String(d.getUTCHours()).padStart(2,'0');
-            const mi = String(d.getUTCMinutes()).padStart(2,'0');
-            return `${mm}${dd}-${hh}${mi}`;
+        function delItem(ref) {
+            if(!confirm("Delete item?")) return;
+            // Optimistic UI update: remove row immediately
+            const row = document.getElementById(`row-${ref}`);
+            if(row) row.style.opacity = '0.3';
+
+            fetch(`${API}?ref=${ref}`, { method: 'DELETE' })
+            .then(r => {
+                if(r.ok) {
+                    if(row) row.remove();
+                } else {
+                    alert("Error deleting");
+                    if(row) row.style.opacity = '1';
+                }
+            })
+            .catch(() => {
+                alert("Conn Error");
+                if(row) row.style.opacity = '1';
+            });
         }
 
         fetch(API).then(r => r.json()).then(data => {
             const tb = document.getElementById('tbody');
             const now = Date.now();
+            
+            if(data.length === 0) {
+                tb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#333;">No active items</td></tr>`;
+                return;
+            }
+
             data.forEach(d => {
                 const lastingHrs = Math.floor((now - parseInt(d.created_at)) / 3600000);
                 const tr = document.createElement('tr');
+                tr.id = `row-${d.ref}`;
                 tr.innerHTML = `
                     <td class="sticky-left">
                         <div class="sym">${d.symb}</div>
                         <span class="ref">${d.ref}</span>
                     </td>
-                    <td class="num" style="color:#d4d4d8">${parseFloat(d.p1)}</td>
-                    <td class="num">${parseFloat(d.p2)}</td>
-                    <td class="num">${fmtTime(parseInt(d.t1))}</td>
-                    <td class="num">${fmtTime(parseInt(d.t2))}</td>
-                    <td class="tag">${d.tag || ''}</td>
+                    <td class="num">${parseFloat(d.p1)}</td>
+                    <td class="tag">${d.tag || '-'}</td>
                     <td class="lasting num">${lastingHrs}h</td>
+                    <td style="text-align:right">
+                        <button class="btn-del" onclick="delItem('${d.ref}')">DEL</button>
+                    </td>
                 `;
                 tb.appendChild(tr);
             });
