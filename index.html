@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
     <title>Trend Linker</title>
     <style>
+        /* General Reset & Base */
         * { box-sizing: border-box; touch-action: manipulation; }
         body { margin: 0; height: 99vh; width: 99vw; display: grid; place-items: center; font-family: 'Roboto Mono', monospace; background:#1a1a1a; color:#e0e0e0; overflow: hidden; }
         .main-wrapper { display: flex; flex-direction: column; width: 360px; gap: 10px; max-height: 99vh; }
@@ -12,27 +13,122 @@
         .grid-container { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .input-group { display:flex; flex-direction:column; gap:6px; }
         label { font-size:0.72em; color:#9aa0a6; text-transform:uppercase; letter-spacing:0.04em; }
+        
+        /* Input & Display Boxes (Time/Price/Symbol) */
         .display-box, input { background:#3d3d3d; border:1px solid #4d4d4d; color:#fff; padding:10px; width:100%; font-family:inherit; font-size:0.95rem; border-radius:4px; outline: none; min-height: 40px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; }
+        #symbol { background:#3d3d3d; border:1px solid #4d4d4d; padding:10px; }
         input { caret-color: #007bff; }
         .display-box.focused, input:focus { border: 1px solid #007bff; background: #454545; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+        
+        /* Tags & Deploy */
         button { background:#007bff; color:white; border:none; padding:12px; cursor:pointer; width:100%; font-weight:bold; border-radius:6px; }
         button:hover { filter:brightness(1.1); }
         .tags { display: flex; gap: 5px;}
         .tag-btn { background:#444; color:#aaa; padding: 4px; flex:1; font-size: 0.75rem; text-align: center; border-radius: 4px; cursor: pointer; border:1px solid #555; }
         .tag-btn.active { background:#4fc3f7; color:#000; border-color:#4fc3f7; font-weight: bold; }
-        .acc-right { display: flex; align-items: center; gap: 10px; }
-        #keypad-container { width: 100%; background: #1c1c1e; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .acc-bar { display: flex; justify-content: space-between; align-items: center; background: #2c2c2e; padding: 6px 10px; height: 40px; border-bottom: 1px solid #3a3a3c; }
-        .acc-arrows { display: flex; gap: 10px; }
-        .acc-btn { background: transparent; color: #007bff; border: none; font-size: 1.2rem; padding: 0 10px; cursor: pointer; width: auto; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Keypad Container & Layers */
+        #keypad-container { width: 100%; background: #1c1c1e; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: relative; }
+        
+        /* Accessory Bar */
+        .acc-bar { 
+            display: flex; 
+            justify-content: flex-start; 
+            align-items: center; 
+            background: #2c2c2e; 
+            padding: 6px 10px; 
+            height: 40px; 
+            border-bottom: 1px solid #3a3a3c; 
+            gap: 10px;
+        }
+
+        .acc-btn { 
+            background: transparent; 
+            color: #007bff; 
+            border: none; 
+            cursor: pointer; 
+            width: auto; 
+            border-radius: 4px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            /* RESTORED TO NORMAL SIZE */
+            font-size: 1.2rem; 
+            padding: 0 10px; 
+        }
         .acc-btn:active { background: #3a3a3c; }
+
+        /* History and Clear Button Visuals */
         .btn-clear { color: #ff5252; font-weight: bold; }
-        .bar-handle { width: 40px; height: 5px; background: #5c5c5e; border-radius: 10px; }
-        .pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 1px; background: #3a3a3c; border-top: 1px solid #3a3a3c; }
+        .acc-history { padding-top: 2px; }
+
+        /* Layer Visibility and Overlap */
+        .keypad-layers { 
+            position: relative; 
+            height: 225px; /* Fixed height matching numpad grid */
+        }
+        
+        .layer-content { 
+            position: absolute; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; 
+            background: #3a3a3c; 
+            overflow-y: auto; 
+        }
+        .layer-content.active { display: block; }
+        
+        /* Forced Hide Scrollbar */
+        .layer-content::-webkit-scrollbar { width: 0; }
+        .layer-content { -ms-overflow-style: none; scrollbar-width: none; } 
+
+        /* Num Pad Grid (Default Active Layer) */
+        #layer-pad { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-gap: 1px; 
+            border-top: 1px solid #3a3a3c; 
+        }
+        .pad-grid.active { display: grid; }
+        .pad-grid { display: none; } 
+
         .key { background: #464648; color: #fff; font-size: 1.5rem; height: 55px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; border-radius: 0; width: 100%; user-select: none; }
         .key:active { background: #636366; }
         .key-del { background: #3a3a3c; font-size: 1.2rem; } 
         .key-dot { background: #3a3a3c; font-weight: bold; padding-bottom: 10px;}
+
+        /* Symbol Grid - 5 in a row */
+        #layer-symb { padding: 4px; }
+        .symb-grid { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); /* 5 columns */
+            gap: 4px; 
+            align-content: flex-start;
+        }
+        .symb-btn { 
+            background: #464648; color: #ddd; border: 1px solid #555; border-radius: 4px; 
+            font-size: 0.75rem; /* Slightly reduced font for 5 buttons */
+            height: 32px; /* Reduced height */  padding: 0;
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; cursor: pointer; text-transform: uppercase; 
+        }
+        .symb-btn:active { background: #007bff; color: white; border-color: #007bff; }
+
+        /* History List */
+        #layer-hist { padding: 0 0 0 0; }
+        .hist-list { padding: 0; margin: 0; list-style: none; }
+        .hist-item { background: #444; border-bottom: 1px solid #555; padding: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #ccc; }
+        .hist-item:hover { background: #505050; }
+        .hist-item:last-child { border-bottom: none; }
+        .hist-info { display: flex; gap: 8px; align-items: center; }
+        
+        /* History Item Styling */
+        .h-symb { font-weight: bold; color: #fff; min-width: 40px;} 
+        .h-p1 { font-weight: bold; color: #fff; min-width: 60px; margin-right: 8px; } 
+        .h-tag { background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
+        .h-time { font-family: monospace; color: #999; }
 
         /* Toast Notification */
         #toast {
@@ -64,7 +160,7 @@
                 </div>
                 <div class="input-group">
                     <label>Symbol</label>
-                    <input id="symbol" value="BTC" onfocus="focusField(4)"/>
+                    <div id="symbol" class="display-box" onclick="symbolClick(event)">BTC</div>
                 </div>
                 <div class="input-group">
                     <label>Tag & Deploy</label>
@@ -79,72 +175,249 @@
         </div>
         <div id="keypad-container">
             <div class="acc-bar">
-                <div class="acc-arrows">
-                    <button class="acc-btn" onclick="moveFocus(-1)">&#9650;</button> 
-                    <button class="acc-btn" onclick="moveFocus(1)">&#9660;</button>
-                    <button class="acc-btn btn-clear" onclick="clearCurrent()">&#10005;</button>  
-                </div>
-                <div class="bar-handle"></div>
-                <div style="width: 50px;">
-                    <div class="acc-right">
-                        <button class="acc-btn" onclick="press('-')">&mdash;</button>
-                    </div>
-                </div> 
+                <button class="acc-btn btn-clear" onclick="clearCurrent()">&#10005;</button> 
+                <button class="acc-btn acc-history" onclick="toggleLayer('hist')">&#x21BA;</button>
+                <div style="flex:1;"></div>
             </div>
-            <div class="pad-grid">
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('1')">1</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('2')">2</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('3')">3</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('4')">4</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('5')">5</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('6')">6</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('7')">7</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('8')">8</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('9')">9</button>
-                <button class="key key-dot" onmousedown="event.preventDefault()" onclick="press('.')">.</button>
-                <button class="key" onmousedown="event.preventDefault()" onclick="press('0')">0</button>
-                <button class="key key-del" onmousedown="event.preventDefault()" onclick="press('del')">&#9003;</button>
+            
+            <div class="keypad-layers">
+                <div id="layer-pad" class="layer-content pad-grid active">
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('1')">1</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('2')">2</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('3')">3</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('4')">4</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('5')">5</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('6')">6</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('7')">7</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('8')">8</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('9')">9</button>
+                    <button class="key key-dot" onmousedown="event.preventDefault()" onclick="press('.')">.</button>
+                    <button class="key" onmousedown="event.preventDefault()" onclick="press('0')">0</button>
+                    <button class="key key-del" onmousedown="event.preventDefault()" onclick="press('del')">&#9003;</button>
+                </div>
+
+                <div id="layer-symb" class="layer-content">
+                    <div class="symb-grid" id="symb-container"></div>
+                </div>
+
+                <div id="layer-hist" class="layer-content">
+                    <ul class="hist-list" id="hist-container"></ul>
+                </div>
             </div>
         </div>
     </div>
     <script>
-        // Update this URL to your Netlify function endpoint
         const API_URL = "/.netlify/functions/api"; 
         let currentTag = "";
         const fieldIds = ['t1', 'p1', 't2', 'p2', 'symbol'];
         let activeIndex = 0; 
+        let symbolClickCount = 0; 
+        let clickTimeout = null;
 
-        window.onload = function() { focusField(0); };
+        const coins = ["BTC","ETH","SOL","DOGE","XRP","BNB","ADA","UNI","LINK","HYPE","AVAX","TRX","BCH","WLFI","LTC","FART","ATOM","TRUMP","SUI","ZEC"];
+
+        window.onload = function() { 
+            focusField(0); 
+            renderSymbPad();
+            toggleLayer('pad');
+        };
+
         function focusField(idx) {
             activeIndex = idx;
-            fieldIds.forEach(id => document.getElementById(id).classList.remove('focused'));
+            fieldIds.forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.remove('focused');
+                const tempInput = document.getElementById('symbol-input-temp');
+                if (tempInput) {
+                    tempInput.blur(); 
+                }
+            });
+            
             const currentEl = document.getElementById(fieldIds[activeIndex]);
             currentEl.classList.add('focused');
-            if (currentEl.tagName === 'INPUT') currentEl.focus();
-            else if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+            
+            if (activeIndex < 4) {
+                toggleLayer('pad'); 
+            }
         }
-        function moveFocus(dir) {
-            let newIndex = activeIndex + dir;
-            if (newIndex < 0) newIndex = fieldIds.length - 1;
-            if (newIndex >= fieldIds.length) newIndex = 0;
-            focusField(newIndex);
+
+        function symbolClick(event) {
+            event.preventDefault();
+            focusField(4); 
+            
+            symbolClickCount++;
+
+            if (symbolClickCount === 1) {
+                toggleLayer('symb');
+                clickTimeout = setTimeout(() => {
+                    symbolClickCount = 0;
+                }, 300); 
+            } else if (symbolClickCount === 2) {
+                clearTimeout(clickTimeout);
+                symbolClickCount = 0;
+                
+                const symbDiv = document.getElementById('symbol');
+                const tempInput = document.createElement('input');
+                
+                tempInput.id = 'symbol-input-temp';
+                tempInput.value = symbDiv.innerText;
+                tempInput.className = symbDiv.className.replace('display-box', '');
+                tempInput.style.cssText = symbDiv.style.cssText + 'display: block;';
+                
+                symbDiv.style.display = 'none';
+                symbDiv.parentNode.appendChild(tempInput);
+                
+                tempInput.focus();
+                
+                document.querySelectorAll('.layer-content').forEach(el => el.classList.remove('active'));
+
+                tempInput.onblur = function() {
+                    const finalValue = this.value;
+                    symbDiv.innerText = finalValue;
+                    symbDiv.style.display = 'flex';
+                    this.remove();
+                    toggleLayer('pad');
+                };
+            }
         }
+
+
         function clearCurrent() {
+            const tempInput = document.getElementById('symbol-input-temp');
+            if (tempInput) {
+                tempInput.value = '';
+                return;
+            }
+
             const el = document.getElementById(fieldIds[activeIndex]);
-            (el.tagName === 'INPUT') ? el.value = '' : el.innerText = '';
+            el.innerText = '';
         }
+
         function press(key) {
+            const tempInput = document.getElementById('symbol-input-temp');
+            if (tempInput) return; 
+
             const el = document.getElementById(fieldIds[activeIndex]);
-            let val = (el.tagName === 'INPUT') ? el.value : el.innerText;
-            if (key === 'del') val = val.slice(0, -1);
-            else if (key === '.') { if (!val.includes('.')) val = val + key; }
-            else val = val + key;
-            (el.tagName === 'INPUT') ? el.value = val : el.innerText = val;
+            let val = el.innerText;
+            const isTimeField = (activeIndex === 0 || activeIndex === 2);
+
+            if (key === 'del') {
+                if (isTimeField && val.endsWith('-')) {
+                    val = val.slice(0, -2);
+                } else {
+                    val = val.slice(0, -1);
+                }
+            }
+            else if (key === '.') { 
+                if (!val.includes('.')) val = val + key; 
+            }
+            else {
+                val = val + key;
+                if (isTimeField && val.length === 4) {
+                    val = val + '-';
+                }
+            }
+
+            el.innerText = val;
         }
+
+        function toggleLayer(layerName) {
+            if (document.getElementById('symbol-input-temp')) return;
+
+            document.querySelectorAll('.layer-content').forEach(el => el.classList.remove('active'));
+            
+            if (layerName === 'symb') {
+                document.getElementById('layer-symb').classList.add('active');
+            } else if (layerName === 'hist') {
+                renderHistory();
+                document.getElementById('layer-hist').classList.add('active');
+            } else {
+                document.getElementById('layer-pad').classList.add('active');
+            }
+        }
+
+        function renderSymbPad() {
+            const con = document.getElementById('symb-container');
+            let html = '';
+            coins.forEach(c => {
+                let insertVal = c;
+                if (c === 'FART') insertVal = 'FARTCOIN';
+                // Note: The symb-grid CSS now uses repeat(5, 1fr)
+                html += `<div class="symb-btn" onmousedown="event.preventDefault()" onclick="insertSymb('${insertVal}')">${c}</div>`;
+            });
+            con.innerHTML = html;
+        }
+
+        function insertSymb(val) {
+            const el = document.getElementById('symbol');
+            el.innerText = val;
+            focusField(4); 
+            toggleLayer('pad'); 
+        }
+
+        // History Logic
+        function getHistory() {
+            const stored = localStorage.getItem('trend_history');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveHistoryItem(item) {
+            let hist = getHistory();
+            hist.unshift(item); 
+            if (hist.length > 10) hist = hist.slice(0, 10);
+            localStorage.setItem('trend_history', JSON.stringify(hist));
+        }
+
+        function renderHistory() {
+            const hist = getHistory();
+            const con = document.getElementById('hist-container');
+            if (hist.length === 0) {
+                con.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">No History</div>';
+                return;
+            }
+            let html = '';
+            hist.forEach((h, idx) => {
+                const p1Raw = h.p1; 
+                
+                html += `
+                <li class="hist-item" onclick="loadHist(${idx})">
+                    <div class="hist-info">
+                        <span class="h-symb">${h.symb}</span>
+                        <span class="h-p1">${p1Raw}</span>
+                        ${h.tag ? `<span class="h-tag">${h.tag}</span>` : ''}
+                    </div>
+                    <span class="h-time">${h.t1Raw}</span>
+                </li>`;
+            });
+            con.innerHTML = html;
+        }
+
+        function loadHist(idx) {
+            const hist = getHistory();
+            const item = hist[idx];
+            if (!item) return;
+
+            document.getElementById('t1').innerText = item.t1Raw;
+            document.getElementById('p1').innerText = item.p1;
+            document.getElementById('t2').innerText = item.t2Raw;
+            document.getElementById('p2').innerText = item.p2;
+            document.getElementById('symbol').innerText = item.symb;
+            
+            currentTag = item.tag;
+            document.querySelectorAll('.tag-btn').forEach(b => {
+                if(b.innerText === item.tag) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            
+            toggleLayer('pad'); 
+            showToast("Loaded.");
+        }
+
         function selTag(el, val) {
             if (currentTag === val) { currentTag = ""; el.classList.remove('active'); }
             else { document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active')); currentTag = val; el.classList.add('active'); }
         }
+
         function getMsLocal(str) {
             if (!str || str.length < 9) return 0;
             const y = 2025;
@@ -155,20 +428,23 @@
             const utc = Date.UTC(y, mm, dd, hh, mi);
             return utc - 8*3600*1000; 
         }
+
         function genRef() {
             const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             let res = '';
             for(let i=0; i<6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
             return res;
         }
+
         function showToast(msg) {
             const t = document.getElementById("toast");
             t.innerText = msg;
             t.className = "show";
             setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
         }
+
         function deploy() {
-            let s = document.getElementById('symbol').value.trim().toUpperCase();
+            let s = document.getElementById('symbol').innerText.trim().toUpperCase();
             let t1Val = document.getElementById('t1').innerText.trim();
             let p1 = document.getElementById('p1').innerText.trim();
             let t2Val = document.getElementById('t2').innerText.trim();
@@ -189,6 +465,15 @@
                 t2: t2,
                 tag: currentTag
             };
+            
+            saveHistoryItem({
+                symb: s,
+                t1Raw: t1Val,
+                p1: p1,
+                t2Raw: t2Val,
+                p2: p2,
+                tag: currentTag
+            });
 
             showToast("Updating...");
 
@@ -198,6 +483,7 @@
             }).then(r => {
                 if(r.ok) showToast("Updated.");
                 else showToast("Error.");
+                renderHistory(); 
             }).catch(e => showToast("Net Error"));
         }
     </script>
