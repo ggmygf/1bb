@@ -477,14 +477,35 @@
 
             showToast("Updating...");
 
-            fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            }).then(r => {
-                if(r.ok) showToast("Updated.");
-                else showToast("Error.");
-                renderHistory(); 
-            }).catch(e => showToast("Net Error"));
+const GR_URL = 'https://nonideationally-susceptible-chrissy.ngrok-free.dev';
+
+fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+}).then(r => {
+    if (r.ok) {
+        // First step (DB Update) is ok, now trigger the VPS sync
+        return fetch(GR_URL);
+    } else {
+        throw new Error("DB Error");
+    }
+}).then(grResponse => {
+    if (grResponse.ok) {
+        // Only show "Updated" once the VPS returns 'ok'
+        showToast("Updated.");
+    } else {
+        showToast("VPS Sync Error.");
+    }
+    renderHistory();
+}).catch(e => {
+    // Catches DB errors, VPS errors, or Network failures
+    if (e.message === "DB Error") {
+        showToast("Error.");
+    } else {
+        showToast("Net Error");
+    }
+    renderHistory(); 
+});
         }
     </script>
 </body>
